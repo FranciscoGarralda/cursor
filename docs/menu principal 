@@ -1,0 +1,94 @@
+import React, { useState } from 'react';
+import { 
+  Plus, 
+  Users, 
+  Wallet, 
+  List, 
+  DollarSign, 
+  TrendingUp, 
+  CreditCard, 
+  Receipt, 
+  Building2,
+  UserCheck,
+  ArrowUpDown
+} from 'lucide-react';
+
+const MenuItem = ({ icon: Icon, title, onClick, isActive }) => (
+  <button 
+    className={`
+      w-full aspect-square rounded-2xl transition-all duration-200
+      ${isActive 
+        ? 'bg-blue-600 text-white' 
+        : 'bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100'
+      }
+      shadow-sm border border-gray-200 flex flex-col items-center justify-center gap-2
+    `}
+    onClick={onClick}
+  >
+    <Icon size={24} />
+    <span className="text-xs font-medium leading-tight text-center">{title}</span>
+  </button>
+);
+
+const App = () => {
+  const [activeItem, setActiveItem] = useState(null);
+
+  const menuItems = [
+    { id: 'nuevo', icon: Plus, title: 'Nuevo Movimiento' },
+    { id: 'saldos', icon: Wallet, title: 'Saldos' },
+    { id: 'movimientos', icon: List, title: 'Movimientos' },
+    { id: 'cuentas', icon: Building2, title: 'Cuentas Corrientes' },
+    { id: 'arbitraje', icon: ArrowUpDown, title: 'Arbitraje' },
+    { id: 'utilidad', icon: TrendingUp, title: 'Utilidad' },
+    { id: 'comisiones', icon: DollarSign, title: 'Comisiones' },
+    { id: 'prestamistas', icon: CreditCard, title: 'Prestamistas' },
+    { id: 'gastos', icon: Receipt, title: 'Gastos' },
+    { id: 'clientes', icon: UserCheck, title: 'Clientes' }
+  ];
+
+  const handleItemClick = (itemId) => {
+    setActiveItem(itemId);
+    console.log(`Navegando a: ${itemId}`);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
+        <h1 className="text-xl font-semibold text-gray-900 text-center">Alliance F&R</h1>
+      </div>
+
+      {/* Menu Grid */}
+      <div className="flex-1 p-4">
+        <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
+          {menuItems.slice(0, 9).map((item) => (
+            <MenuItem
+              key={item.id}
+              icon={item.icon}
+              title={item.title}
+              isActive={activeItem === item.id}
+              onClick={() => handleItemClick(item.id)}
+            />
+          ))}
+        </div>
+        
+        {/* Fila adicional para el décimo elemento */}
+        {menuItems.length > 9 && (
+          <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto mt-3">
+            <div></div>
+            <MenuItem
+              key={menuItems[9].id}
+              icon={menuItems[9].icon}
+              title={menuItems[9].title}
+              isActive={activeItem === menuItems[9].id}
+              onClick={() => handleItemClick(menuItems[9].id)}
+            />
+            <div></div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default App;
