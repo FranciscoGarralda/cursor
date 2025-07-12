@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Operaciones Financieras</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
+            min-height: 100vh;
+        }
+        
+        .shadow-custom {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .hover-scale {
+            transition: transform 0.2s ease-in-out;
+        }
+        
+        .hover-scale:hover {
+            transform: scale(1.02);
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .success-message {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Iconos SVG
+        const DollarSign = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+            </svg>
+        );
+
+        const Check = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+        );
+
+        const AlertCircle = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
+
+        const Save = ({ className = "h-5 w-5" }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3-3-3m3-3v12" />
+            </svg>
+        );
+
+        const FinancialOperationsApp = () => {
+            // Base de datos simulada de clientes
+            const clientesDB = [
+                'Juan Pérez', 'María García', 'Carlos López', 'Ana Martínez',
+                'Pedro Rodriguez', 'Laura Fernández', 'Diego Sánchez', 'Sofía González',
+                'Miguel Torres', 'Carmen Ruiz', 'Jorge Herrera', 'Valentina Silva'
+            ];
+
+            const monedas = [
+                { value: '', label: 'Seleccionar moneda' },
+                { value: 'PESO', label: '🇦🇷 PESO' },
+                { value: 'USD', label: '💵 USD' },
+                { value: 'EURO', label: '🇪🇺 EURO' },
+                { value: 'USDT', label: '₿ USDT' },
+                { value: 'REAL', label: '🇧🇷 REAL' },
+                { value: 'LIBRA', label: '🇬🇧 LIBRA' },
+                { value: 'CL', label: '🇨🇱 CL' }
+            ];
+
+            const cuentas = [
+                { value: '', label: 'Seleccionar cuenta' },
+                { value: 'efectivo', label: 'Efectivo' },
+                { value: 'bancaria_socio1', label: 'Cuenta Bancaria Socio1' },
+                { value: 'bancaria_socio2', label: 'Cuenta Bancaria Socio2' },
+                { value: 'bancaria_alliance', label: 'Cuenta Bancaria Alliance' },
+                { value: 'usdt_socio1', label: 'Cuenta Socio1 (USDT)' },
+                { value: 'usdt_socio2', label: 'Cuenta Socio2 (USDT)' },
+                { value: 'cliente', label: 'Cliente' }
+            ];
+
+            const socios = [
+                { value: '', label: 'Seleccionar quien realizó' },
+                { value: 'socio1', label: 'Socio 1' },
+                { value: 'socio2', label: 'Socio 2' },
+                { value: 'otro', label: 'Otro' }
+            ];
+
+            const estados = [
+                { value: '', label: 'Seleccionar estado' },
+                { value: 'realizado', label: 'Realizado' },
+                { value: 'pendiente', label: 'Pendiente' }
+            ];
+
+            const operaciones = {
+                'TRANSACCIONES': { 
+                    icon: '💱', 
+                    subMenu: ['COMPRA', 'VENTA', 'ARBITRAJE'],
+                    color: 'bg-blue-500'
+                },
+                'CUENTAS_CORRIENTES': { 
+                    icon: '🤝', 
+                    subMenu: ['ALL', 'ME', 'SS', 'AL'],
+                    color: 'bg-green-500'
+                },
+                'SOCIOS': { 
+                    icon: '👥', 
+                    subMenu: ['Ingreso', 'Salida', 'Prestamo', 'Devolución'],
+                    color: 'bg-purple-500'
+                },
+                'ADMINISTRATIVAS': { 
+                    icon: '🔧', 
+                    subMenu: ['Ajustes', 'Gastos'],
+                    color: 'bg-orange-500'
+                },
+                'PRESTAMISTAS': { 
+                    icon: '🏦', 
+                    subMenu: ['Prestamo', 'Retiro'],
+                    color: 'bg-red-500'
+                }
+            };
+
+            const [formData, setFormData] = useState({
+                cliente: '',
+                fecha: new Date().toISOString().split('T')[0],
+                detalle: '',
+                operacion: '',
+                subOperacion: '',
+                monto: '',
+                moneda: '',
+                tc: '',
+                monedaTC: '',
+                cuenta: '',
+                total: '',
+                cuentaEgreso: '',
+                pagoDiferido: false,
+                montoDiferido: '',
+                cuentaDiferida: '',
+                montoCompra: '',
+                monedaCompra: '',
+                tcCompra: '',
+                totalCompra: '',
+                montoVenta: '',
+                monedaVenta: '',
+                tcVenta: '',
+                totalVenta: '',
+                comisionArbitraje: '',
+                cuentaComision: '',
+                montoIngreso: '',
+                monedaIngreso: '',
+                cuentaIngreso: '',
+                montoEgreso: '',
+                monedaEgreso: '',
+                cuentaEgresoCC: '',
+                montoSocio: '',
+                monedaSocio: '',
+                cuentaSocio: '',
+                montoAjuste: '',
+                monedaAjuste: '',
+                cuentaAjuste: '',
+                motivoAjuste: '',
+                montoPrestamista: '',
+                monedaPrestamista: '',
+                cuentaPrestamista: '',
+                interesPorcentaje: '',
+                lapsoPrestamo: '',
+                comision: '',
+                monedaComision: '',
+                estado: '',
+                por: '',
+                nombreOtro: '',
+                borrador: false
+            });
+
+            const [clientesSugeridos, setClientesSugeridos] = useState([]);
+            const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
+            const [showSuccess, setShowSuccess] = useState(false);
+            const [operacionesGuardadas, setOperacionesGuardadas] = useState([]);
+
+            // Obtener el nombre del día
+            const getNombreDia = (fecha) => {
+                const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                const date = new Date(fecha + 'T00:00:00');
+                return dias[date.getDay()];
+            };
+
+            // Filtrar clientes mientras escribe
+            const handleClienteChange = (value) => {
+                setFormData(prev => ({ ...prev, cliente: value }));
+                
+                if (value.length > 0) {
+                    const sugerencias = clientesDB.filter(cliente => 
+                        cliente.toLowerCase().includes(value.toLowerCase())
+                    );
+                    setClientesSugeridos(sugerencias);
+                    setMostrarSugerencias(true);
+                } else {
+                    setMostrarSugerencias(false);
+                }
+            };
+
+            // Seleccionar cliente de las sugerencias
+            const seleccionarCliente = (cliente) => {
+                setFormData(prev => ({ ...prev, cliente }));
+                setMostrarSugerencias(false);
+            };
+
+            // Calcular total para compra/venta
+            useEffect(() => {
+                if (formData.subOperacion === 'COMPRA' || formData.subOperacion === 'VENTA') {
+                    const monto = parseFloat(formData.monto) || 0;
+                    const tc = parseFloat(formData.tc) || 0;
+                    
+                    if (monto > 0 && tc > 0) {
+                        const total = (monto * tc).toFixed(2);
+                        setFormData(prev => ({ ...prev, total }));
+                    }
+                }
+            }, [formData.monto, formData.tc, formData.subOperacion]);
+
+            // Calcular totales de arbitraje
+            useEffect(() => {
+                if (formData.subOperacion === 'ARBITRAJE') {
+                    const montoCompra = parseFloat(formData.montoCompra) || 0;
+                    const tcCompra = parseFloat(formData.tcCompra) || 0;
+                    if (montoCompra > 0 && tcCompra > 0) {
+                        setFormData(prev => ({ ...prev, totalCompra: (montoCompra * tcCompra).toFixed(2) }));
+                    }
+                    
+                    const montoVenta = parseFloat(formData.montoVenta) || 0;
+                    const tcVenta = parseFloat(formData.tcVenta) || 0;
+                    if (montoVenta > 0 && tcVenta > 0) {
+                        setFormData(prev => ({ ...prev, totalVenta: (montoVenta * tcVenta).toFixed(2) }));
+                    }
+                }
+            }, [formData.montoCompra, formData.tcCompra, formData.montoVenta, formData.tcVenta, formData.subOperacion]);
+
+            // Calcular comisión para arbitraje
+            useEffect(() => {
+                if (formData.subOperacion === 'ARBITRAJE') {
+                    const totalCompra = parseFloat(formData.totalCompra) || 0;
+                    const totalVenta = parseFloat(formData.totalVenta) || 0;
+                    
+                    if (totalCompra > 0 && totalVenta > 0) {
+                        const comision = Math.abs(totalVenta - totalCompra).toFixed(2);
+                        setFormData(prev => ({ ...prev, comisionArbitraje: comision }));
+                    }
+                }
+            }, [formData.totalCompra, formData.totalVenta, formData.subOperacion]);
+
+            const handleInputChange = (field, value) => {
+                if (field === 'operacion') {
+                    setFormData(prev => ({
+                        ...prev,
+                        [field]: value,
+                        subOperacion: ''
+                    }));
+                } else {
+                    setFormData(prev => ({
+                        ...prev,
+                        [field]: value
+                    }));
+                }
+            };
+
+            const guardarBorrador = () => {
+                const borrador = { ...formData, borrador: true, id: Date.now() };
+                setOperacionesGuardadas(prev => [...prev, borrador]);
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 3000);
+            };
+
+            const formatCurrency = (value, moneda) => {
+                if (!value) return '';
+                const num = parseFloat(value);
+                if (isNaN(num)) return value;
+                
+                const symbols = {
+                    'PESO': '$',
+                    'USD': 'US$',
+                    'EURO': '€',
+                    'USDT': '₿',
+                    'REAL': 'R$',
+                    'LIBRA': '£',
+                    'CL': 'CL$'
+                };
+                
+                return `${symbols[moneda] || ''}${num.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const operacionCompleta = { ...formData, borrador: false, id: Date.now() };
+                setOperacionesGuardadas(prev => [...prev, operacionCompleta]);
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 3000);
+                
+                // Limpiar formulario
+                setFormData({
+                    cliente: '',
+                    fecha: new Date().toISOString().split('T')[0],
+                    detalle: '',
+                    operacion: '',
+                    subOperacion: '',
+                    monto: '', moneda: '', tc: '', monedaTC: '', cuenta: '', total: '',
+                    cuentaEgreso: '', pagoDiferido: false, montoDiferido: '', cuentaDiferida: '',
+                    montoCompra: '', monedaCompra: '', tcCompra: '', totalCompra: '',
+                    montoVenta: '', monedaVenta: '', tcVenta: '', totalVenta: '',
+                    comisionArbitraje: '', cuentaComision: '',
+                    montoIngreso: '', monedaIngreso: '', cuentaIngreso: '',
+                    montoEgreso: '', monedaEgreso: '', cuentaEgresoCC: '',
+                    montoSocio: '', monedaSocio: '', cuentaSocio: '',
+                    montoAjuste: '', monedaAjuste: '', cuentaAjuste: '', motivoAjuste: '',
+                    montoPrestamista: '', monedaPrestamista: '', cuentaPrestamista: '',
+                    interesPorcentaje: '', lapsoPrestamo: '',
+                    comision: '', monedaComision: '', estado: '', por: '', nombreOtro: '',
+                    borrador: false
+                });
+            };
+
+            // Función para determinar los labels dinámicos
+            const getLabels = () => {
+                if (formData.subOperacion === 'COMPRA') {
+                    return {
+                        montoLabel: 'MONTO (INGRESO)',
+                        totalLabel: 'TOTAL (EGRESO)',
+                        cuentaLabel: 'CUENTA (INGRESO)',
+                        cuentaEgresoLabel: 'CUENTA (EGRESO)',
+                        pagoDiferidoLabel: 'EGRESO'
+                    };
+                } else if (formData.subOperacion === 'VENTA') {
+                    return {
+                        montoLabel: 'MONTO (EGRESO)',
+                        totalLabel: 'TOTAL (INGRESO)',
+                        cuentaLabel: 'CUENTA (EGRESO)',
+                        cuentaEgresoLabel: 'CUENTA (INGRESO)',
+                        pagoDiferidoLabel: 'INGRESO'
+                    };
+                }
+                return {
+                    montoLabel: 'MONTO',
+                    totalLabel: 'TOTAL',
+                    cuentaLabel: 'CUENTA',
+                    cuentaEgresoLabel: 'CUENTA',
+                    pagoDiferidoLabel: 'MONTO'
+                };
+            };
+
+            const labels = getLabels();
+
+            return (
+                <div className="gradient-bg p-4">
+                    <div className="max-w-6xl mx-auto">
+                        {/* Header */}
+                        <div className="bg-white rounded-xl shadow-custom p-6 mb-6 animate-fade-in">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-lg">
+                                        <DollarSign className="h-6 w-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-2xl font-bold text-gray-900">Sistema de Operaciones Financieras</h1>
+                                        <p className="text-sm text-gray-600">Gestión completa de transacciones y operaciones</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-3xl font-bold text-blue-600">{operacionesGuardadas.length}</div>
+                                    <div className="text-sm text-gray-600">Operaciones registradas</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Mensaje de éxito */}
+                        {showSuccess && (
+                            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4 flex items-center success-message">
+                                <Check className="h-5 w-5 mr-2" />
+                                <span>¡Operación guardada exitosamente!</span>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Formulario principal */}
+                            <div className="lg:col-span-2">
+                                <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-custom p-6 hover-scale">
+                                    <h2 className="text-xl font-semibold text-gray-900 mb-6">Nueva Operación</h2>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* CLIENTE con autocompletado */}
+                                        <div className="relative">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">CLIENTE *</label>
+                                            <input
+                                                type="text"
+                                                value={formData.cliente}
+                                                onChange={(e) => handleClienteChange(e.target.value)}
+                                                onBlur={() => setTimeout(() => setMostrarSugerencias(false), 200)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                placeholder="Buscar cliente..."
+                                            />
+                                            {mostrarSugerencias && clientesSugeridos.length > 0 && (
+                                                <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+                                                    {clientesSugeridos.map((cliente, index) => (
+                                                        <div
+                                                            key={index}
+                                                            onClick={() => seleccionarCliente(cliente)}
+                                                            className="px-3 py-2 hover:bg-blue-50 cursor-pointer transition-colors"
+                                                        >
+                                                            {cliente}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* FECHA con día de la semana */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                FECHA * - <span className="text-blue-600 font-semibold">{getNombreDia(formData.fecha)}</span>
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={formData.fecha}
+                                                onChange={(e) => handleInputChange('fecha', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                            />
+                                        </div>
+
+                                        {/* DETALLE (opcional) */}
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">DETALLE (opcional)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.detalle}
+                                                onChange={(e) => handleInputChange('detalle', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                placeholder="Descripción adicional..."
+                                            />
+                                        </div>
+
+                                        {/* OPERACIÓN */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">OPERACIÓN *</label>
+                                            <select
+                                                value={formData.operacion}
+                                                onChange={(e) => handleInputChange('operacion', e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                            >
+                                                <option value="">Seleccionar operación</option>
+                                                {Object.entries(operaciones).map(([key, op]) => (
+                                                    <option key={key} value={key}>
+                                                        {op.icon} {key.replace('_', ' ')}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* SUB-OPERACIÓN */}
+                                        {formData.operacion && operaciones[formData.operacion] && (
+                                            <div className="animate-fade-in">
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">DETALLE OPERACIÓN *</label>
+                                                <select
+                                                    value={formData.subOperacion}
+                                                    onChange={(e) => handleInputChange('subOperacion', e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                >
+                                                    <option value="">Seleccionar detalle</option>
+                                                    {operaciones[formData.operacion].subMenu.map(subOp => (
+                                                        <option key={subOp} value={subOp}>
+                                                            {subOp}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* CAMPOS DINÁMICOS SEGÚN OPERACIÓN */}
+                                    {formData.subOperacion && (
+                                        <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg animate-fade-in">
+                                            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                                                <span className="mr-2">{operaciones[formData.operacion]?.icon}</span>
+                                                {formData.operacion.replace('_', ' ')} - {formData.subOperacion}
+                                            </h3>
+                                            
+                                            {/* TRANSACCIONES - COMPRA */}
+                                            {formData.operacion === 'TRANSACCIONES' && formData.subOperacion === 'COMPRA' && (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">{labels.montoLabel} *</label>
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            value={formData.monto}
+                                                            onChange={(e) => handleInputChange('monto', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                            placeholder="0.00"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">MONEDA *</label>
+                                                        <select
+                                                            value={formData.moneda}
+                                                            onChange={(e) => handleInputChange('moneda', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                        >
+                                                            {monedas.map(moneda => (
+                                                                <option key={moneda.value} value={moneda.value}>
+                                                                    {moneda.label}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">TC *</label>
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            value={formData.tc}
+                                                            onChange={(e) => handleInputChange('tc', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                            placeholder="Tipo de cambio"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">MONEDA TC *</label>
+                                                        <select
+                                                            value={formData.monedaTC}
+                                                            onChange={(e) => handleInputChange('monedaTC', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                        >
+                                                            {monedas.map(moneda => (
+                                                                <option key={moneda.value} value={moneda.value}>
+                                                                    {moneda.label}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">{labels.cuentaLabel} *</label>
+                                                        <select
+                                                            value={formData.cuenta}
+                                                            onChange={(e) => handleInputChange('cuenta', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                        >
+                                                            {cuentas.map(cuenta => (
+                                                                <option key={cuenta.value} value={cuenta.value}>
+                                                                    {cuenta.label}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                            {labels.totalLabel} *
+                                                            {formData.total && formData.monedaTC && (
+                                                                <span className="ml-2 text-blue-600 font-bold">
+                                                                    = {formatCurrency(formData.total, formData.monedaTC)}
+                                                                </span>
+                                                            )}
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            value={formData.total}
+                                                            readOnly
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-blue-50 text-blue-800 font-semibold"
+                                                            placeholder="Calculado automáticamente"
+                                                        />
+                                                    </div>
+                                                    <div className="md:col-span-2">
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">{labels.cuentaEgresoLabel} *</label>
+                                                        <select
+                                                            value={formData.cuentaEgreso}
+                                                            onChange={(e) => handleInputChange('cuentaEgreso', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                        >
+                                                            {cuentas.map(cuenta => (
+                                                                <option key={cuenta.value} value={cuenta.value}>
+                                                                    {cuenta.label}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="md:col-span-3">
+                                                        <div className="flex items-center space-x-2 mb-3">
+                                                            <input
+                                                                type="checkbox"
+                                                                id="pagoDiferido"
+                                                                checked={formData.pagoDiferido}
+                                                                onChange={(e) => handleInputChange('pagoDiferido', e.target.checked)}
+                                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                            />
+                                                            <label htmlFor="pagoDiferido" className="text-sm font-medium text-gray-700">
+                                                                Pago con dos cuentas diferentes
+                                                            </label>
+                                                        </div>
+
+                                                        {formData.pagoDiferido && (
+                                                            <div className="grid grid-cols-2 gap-3 animate-fade-in">
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 mb-2">MONTO ({labels.pagoDiferidoLabel}) *</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        value={formData.montoDiferido}
+                                                                        onChange={(e) => handleInputChange('montoDiferido', e.target.value)}
+                                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                                        placeholder="0.00"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 mb-2">CUENTA *</label>
+                                                                    <select
+                                                                        value={formData.cuentaDiferida}
+                                                                        onChange={(e) => handleInputChange('cuentaDiferida', e.target.value)}
+                                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                                    >
+                                                                        {cuentas.map(cuenta => (
+                                                                            <option key={cuenta.value} value={cuenta.value}>
+                                                                                {cuenta.label}
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">ESTADO *</label>
+                                                        <select
+                                                            value={formData.estado}
+                                                            onChange={(e) => handleInputChange('estado', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                        >
+                                                            {estados.map(estado => (
+                                                                <option key={estado.value} value={estado.value}>
+                                                                    {estado.label}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">POR *</label>
+                                                        <select
+                                                            value={formData.por}
+                                                            onChange={(e) => handleInputChange('por', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                        >
+                                                            {socios.map(socio => (
+                                                                <option key={socio.value} value={socio.value}>
+                                                                    {socio.label}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* TRANSACCIONES - ARBITRAJE */}
+                                            {formData.operacion === 'TRANSACCIONES' && formData.subOperacion === 'ARBITRAJE' && (
+                                                <div className="space-y-4">
+                                                    {/* Sección COMPRA */}
+                                                    <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                                                        <h4 className="text-md font-semibold text-red-800 mb-3">📉 COMPRA</h4>
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">MONTO</label>
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={formData.montoCompra}
+                                                                    onChange={(e) => handleInputChange('montoCompra', e.target.value)}
+                                                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                                    placeholder="0.00"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">TC</label>
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={formData.tcCompra}
+                                                                    onChange={(e) => handleInputChange('tcCompra', e.target.value)}
+                                                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                                    placeholder="0.00"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">TOTAL</label>
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={formData.totalCompra}
+                                                                    readOnly
+                                                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg bg-red-100 text-red-800 font-semibold"
+                                                                    placeholder="Auto"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">MONEDA</label>
+                                                                <select
+                                                                    value={formData.monedaCompra}
+                                                                    onChange={(e) => handleInputChange('monedaCompra', e.target.value)}
+                                                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                                >
+                                                                    {monedas.map(moneda => (
+                                                                        <option key={moneda.value} value={moneda.value}>
+                                                                            {moneda.label}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Sección VENTA */}
+                                                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                                                        <h4 className="text-md font-semibold text-green-800 mb-3">📈 VENTA</h4>
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">MONTO</label>
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={formData.montoVenta}
+                                                                    onChange={(e) => handleInputChange('montoVenta', e.target.value)}
+                                                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                                    placeholder="0.00"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">TC</label>
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={formData.tcVenta}
+                                                                    onChange={(e) => handleInputChange('tcVenta', e.target.value)}
+                                                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                                    placeholder="0.00"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">TOTAL</label>
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={formData.totalVenta}
+                                                                    readOnly
+                                                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg bg-green-100 text-green-800 font-semibold"
+                                                                    placeholder="Auto"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-700 mb-1">MONEDA</label>
+                                                                <select
+                                                                    value={formData.monedaVenta}
+                                                                    onChange={(e) => handleInputChange('monedaVenta', e.target.value)}
+                                                                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                                >
+                                                                    {monedas.map(moneda => (
+                                                                        <option key={moneda.value} value={moneda.value}>
+                                                                            {moneda.label}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Comisión calculada */}
+                                                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                                                        <h4 className="text-md font-semibold text-yellow-800 mb-3">💰 COMISIÓN CALCULADA</h4>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                                    COMISIÓN
+                                                                    {formData.comisionArbitraje && (
+                                                                        <span className="ml-2 text-yellow-600 font-bold">
+                                                                            = {formatCurrency(formData.comisionArbitraje, formData.monedaCompra)}
+                                                                        </span>
+                                                                    )}
+                                                                </label>
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={formData.comisionArbitraje}
+                                                                    readOnly
+                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-yellow-100 text-yellow-800 font-semibold"
+                                                                    placeholder="Calculado automáticamente"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 mb-2">CUENTA COMISIÓN *</label>
+                                                                <select
+                                                                    value={formData.cuentaComision}
+                                                                    onChange={(e) => handleInputChange('cuentaComision', e.target.value)}
+                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                                                                >
+                                                                    {cuentas.map(cuenta => (
+                                                                        <option key={cuenta.value} value={cuenta.value}>
+                                                                            {cuenta.label}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Estado y Por */}
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">ESTADO *</label>
+                                                            <select
+                                                                value={formData.estado}
+                                                                onChange={(e) => handleInputChange('estado', e.target.value)}
+                                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            >
+                                                                {estados.map(estado => (
+                                                                    <option key={estado.value} value={estado.value}>
+                                                                        {estado.label}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">POR *</label>
+                                                            <select
+                                                                value={formData.por}
+                                                                onChange={(e) => handleInputChange('por', e.target.value)}
+                                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            >
+                                                                {socios.map(socio => (
+                                                                    <option key={socio.value} value={socio.value}>
+                                                                        {socio.label}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Campos adicionales para "Otro" */}
+                                            {formData.por === 'otro' && (
+                                                <div className="mt-4 animate-fade-in">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">NOMBRE *</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.nombreOtro}
+                                                        onChange={(e) => handleInputChange('nombreOtro', e.target.value)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        placeholder="Ingrese el nombre"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* BOTONES */}
+                                    {formData.subOperacion && (
+                                        <div className="mt-6 flex space-x-4 animate-fade-in">
+                                            <button
+                                                type="button"
+                                                onClick={guardarBorrador}
+                                                className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 hover-scale"
+                                            >
+                                                <Save className="h-5 w-5" />
+                                                <span>Guardar Borrador</span>
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 hover-scale"
+                                            >
+                                                <Check className="h-5 w-5" />
+                                                <span>Guardar Operación</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </form>
+                            </div>
+
+                            {/* Panel lateral con resumen */}
+                            <div className="space-y-6">
+                                {/* Resumen rápido */}
+                                <div className="bg-white rounded-xl shadow-custom p-6 hover-scale">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Resumen del Día</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center p-2 bg-blue-50 rounded-lg">
+                                            <span className="text-sm text-gray-600">Operaciones hoy:</span>
+                                            <span className="font-bold text-blue-600">{operacionesGuardadas.filter(op => op.fecha === new Date().toISOString().split('T')[0]).length}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center p-2 bg-yellow-50 rounded-lg">
+                                            <span className="text-sm text-gray-600">Borradores:</span>
+                                            <span className="font-bold text-yellow-600">{operacionesGuardadas.filter(op => op.borrador).length}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center p-2 bg-green-50 rounded-lg">
+                                            <span className="text-sm text-gray-600">Completadas:</span>
+                                            <span className="font-bold text-green-600">{operacionesGuardadas.filter(op => !op.borrador).length}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Operaciones recientes */}
+                                {operacionesGuardadas.length > 0 && (
+                                    <div className="bg-white rounded-xl shadow-custom p-6 hover-scale">
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 Operaciones Recientes</h3>
+                                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                                            {operacionesGuardadas.slice(-5).reverse().map((op) => (
+                                                <div key={op.id} className="bg-gradient-to-r from-gray-50 to-blue-50 p-3 rounded-lg border-l-4 border-blue-500 animate-fade-in">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className="font-medium text-gray-900">👤 {op.cliente}</span>
+                                                        <span className="text-xs text-gray-500">📅 {op.fecha}</span>
+                                                    </div>
+                                                    <div className="text-sm text-gray-600 mb-1">
+                                                        <span className="font-medium">{operaciones[op.operacion]?.icon} {op.operacion}</span> - {op.subOperacion}
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-xs text-gray-500">
+                                                            👥 {op.por || 'Sin asignar'}
+                                                        </span>
+                                                        {op.borrador && (
+                                                            <span className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full border border-yellow-300">
+                                                                📝 Borrador
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Tips de uso */}
+                                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl shadow-custom p-6 border border-blue-200">
+                                    <h3 className="text-lg font-semibold text-blue-900 mb-3">💡 Tips de Uso</h3>
+                                    <ul className="text-sm text-blue-800 space-y-2">
+                                        <li>• Los campos aparecen progresivamente según la operación</li>
+                                        <li>• Los totales se calculan automáticamente</li>
+                                        <li>• Usa "Borrador" para operaciones incompletas</li>
+                                        <li>• Los labels cambian según COMPRA/VENTA</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Renderizar la aplicación
+        ReactDOM.render(<FinancialOperationsApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
